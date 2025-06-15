@@ -1,100 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Player</title>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>🎵 MP3 Search & Play (JioSaavn)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; }
+    .results { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border-top: 1px solid #ddd; }
+    .results li { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+    .results li:hover { background: #f0f0f0; }
+    audio { width: 100%; margin-top: 20px; }
+    .now-playing { font-weight: bold; margin-top: 15px; text-align: center; }
+  </style>
 </head>
-
 <body>
-    <div class="player-container">
-        <div class="current-play">
-            <div class="left"></div>
-            <div class="right">
-                <div>
-                    <h1 class="music">Phool</h1>
-                    <p class="artist">Sujan Chapagain</p>
-                </div>
-                <div class="controls">
-                    <div class="play">
-                        <button class="previous-music"><i class="ri-arrow-left-s-line"></i></button>
-                        <button class="play-pause-music"><i class="ri-arrow-right-s-fill"></i></button>
-                        <button class="next-music"><i class="ri-arrow-right-s-line"></i></button>
-                    </div>
-                    <div class="volume">
-                        <input type="range" name="volume-slider" id="volume-slider" min="0" max="1" step="0.01"
-                            value="1">
-                    </div>
-                </div>
+  <div class="container">
+    <h2>🎧 Search & Play MP3 (Saavn)</h2>
+    <input id="searchBox" placeholder="Type a song..." autocomplete="off" />
+    <ul class="results" id="resultsList"></ul>
+    <div class="now-playing" id="nowPlaying">No song playing</div>
+    <audio id="audioPlayer" controls autoplay></audio>
+  </div>
 
-            </div>
-        </div>
-        <div class="music-list">
-            <!-- <div class="music music1">
-                <div class="left">
-                    <div class="music-thumbnail">
-                        <img src="https://cdns-images.dzcdn.net/images/cover/a2159ccceef4e74ffe617bb5085371ff/1900x1900-000000-80-0-0.jpg"
-                            alt="">
-                    </div>
-                    <div class="music-name">
-                        <h3>The Woolen Sweater</h3>
-                    </div>
-                </div>
-                <div class="right">
-                    <span>5:02</span>
-                </div>
-            </div>
-            <div class="music music2">
-                <div class="left">
-                    <div class="music-thumbnail">
-                        <img src="https://m.media-amazon.com/images/I/51lKASAMB7L._UXNaN_FMjpg_QL85_.jpg" alt="">
-                    </div>
-                    <div class="music-name">
-                        <h3>Ve Kamleya</h3>
-                    </div>
-                </div>
-                <div class="right">3:04</div>
-            </div>
-            <div class="music music3">
-                <div class="left">
-                    <div class="music-thumbnail">
-                        <img src="https://i.scdn.co/image/ab67616d0000b273eef98342c3e440f93d265d6a" alt="">
-                    </div>
-                    <div class="music-name">
-                        <h3>Golden Hour</h3>
-                    </div>
-                </div>
-                <div class="right">3:01</div>
-            </div>
-            <div class="music music4">
-                <div class="left">
-                    <div class="music-thumbnail">
-                        <img src="https://c.saavncdn.com/042/Sam-Bahadur-Hindi-2023-20231127181521-500x500.jpg" alt="">
-                    </div>
-                    <div class="music-name">
-                        <h3>Itni Si Baat</h3>
-                    </div>
-                </div>
-                <div class="right">4:08</div>
-            </div>
-            <div class="music music5">
-                <div class="left">
-                    <div class="music-thumbnail">
-                        <img src="https://images.genius.com/9523d19db6dc1fc7bbb87ddf8e71ce63.1000x1000x1.png" alt="">
-                    </div>
-                    <div class="music-name">
-                        <h3>Pehle Bhi Main</h3>
-                    </div>
-                </div>
-                <div class="right">5:03</div>
-            </div> -->
-        </div>
+  <script>
+    const searchBox = document.getElementById("searchBox");
+    const resultsList = document.getElementById("resultsList");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const nowPlaying = document.getElementById("nowPlaying");
+    let searchTimeout;
 
-    </div>
-    <script src="main.js"></script>
+    searchBox.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      const query = searchBox.value.trim();
+      if (query.length < 2) {
+        resultsList.innerHTML = '';
+        return;
+      }
+      searchTimeout = setTimeout(() => searchSongs(query), 300); // debounce
+    });
+
+    async function searchSongs(query) {
+      try {
+        const res = await fetch(`https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        const songs = data.data.results;
+        showResults(songs);
+      } catch (e) {
+        console.error("Error fetching songs:", e);
+        resultsList.innerHTML = '<li>Error fetching songs</li>';
+      }
+    }
+
+    function showResults(songs) {
+      resultsList.innerHTML = '';
+      songs.forEach(song => {
+        const li = document.createElement('li');
+        const artist = song.primaryArtists || 'Unknown Artist';
+        li.textContent = `${song.name} — ${artist}`;
+        li.addEventListener('click', () => {
+          const audioUrl = song.downloadUrl?.[song.downloadUrl.length - 1]?.link;
+          if (audioUrl) {
+            audioPlayer.src = audioUrl;
+            nowPlaying.textContent = `▶️ Playing: ${song.name} — ${artist}`;
+          } else {
+            nowPlaying.textContent = '❌ MP3 not available for this track';
+          }
+        });
+        resultsList.appendChild(li);
+      });
+    }
+  </script>
 </body>
-
 </html>
